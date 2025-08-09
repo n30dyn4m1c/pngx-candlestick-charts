@@ -56,13 +56,9 @@
   </div>
 
   <script>
-    // ---------- Config ----------
     const BASE = 'https://pngx-api.onrender.com/api/v2';
-
-    // Fallback symbols (from your list) in case API listing fails
     const FALLBACK_SYMBOLS = ["BSP","CCP","CGA","CPL","KAM","KSL","NEM","NGP","NIU","SST","STO"];
 
-    // ---------- DOM ----------
     const selSymbol = document.getElementById('symbol');
     const inpStart  = document.getElementById('start');
     const inpEnd    = document.getElementById('end');
@@ -70,20 +66,18 @@
     const statusEl  = document.getElementById('status');
     const chartEl   = document.getElementById('chart');
 
-    // ---------- Helpers ----------
     const fmt = (d)=> d.toISOString().slice(0,10);
     function setStatus(msg){ statusEl.textContent = msg || ''; }
 
-    // Initialize default date range (last 180 days)
+    // Default last 30 days
     (function initDates(){
       const end = new Date();
       const start = new Date();
-      start.setDate(end.getDate() - 180);
+      start.setDate(end.getDate() - 30);
       inpStart.value = fmt(start);
       inpEnd.value   = fmt(end);
     })();
 
-    // Load symbols from API, with resilient parsing
     async function loadSymbols(){
       try{
         const r = await fetch(`${BASE}/tickers`, { cache: 'no-store' });
@@ -111,13 +105,11 @@
       });
     }
 
-    // Fetch historical OHLC for a symbol
     async function fetchOHLC(symbol, start, end){
       const url = `${BASE}/historicals/${encodeURIComponent(symbol)}?start=${start}&end=${end}`;
       const r = await fetch(url, { cache: 'no-store' });
       if(!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
-      // Expect array of { t, o, h, l, c, v }
       if(!Array.isArray(data)) return [];
       return data
         .map(d => ({
@@ -133,7 +125,6 @@
       return Number.isFinite(n) ? n : NaN;
     }
 
-    // ---------- Chart ----------
     let chart;
     function ensureChart(){
       if(chart) return chart;
@@ -173,14 +164,11 @@
       }
     }
 
-    // ---------- Events ----------
     btnLoad.addEventListener('click', loadChart);
     window.addEventListener('keydown', (e)=>{ if(e.key==='Enter') loadChart(); });
 
-    // ---------- Boot ----------
     (async function(){
       await loadSymbols();
-      // Preload first chart
       if(selSymbol.options.length){ selSymbol.selectedIndex = 0; }
       loadChart();
     })();
