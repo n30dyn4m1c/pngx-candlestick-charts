@@ -52,7 +52,7 @@
       <div id="status"></div>
       <div id="chart"></div>
       <div class="footer">
-        Client-side demo for educational use. Data from the public <a href="https://github.com/chrisaugu/pngx-api" target="_blank" rel="noreferrer">NUKU API</a> created by <a href="https://github.com/chrisaugu" target="_blank" rel="noreferrer">Chris August</a>. No warranties.
+        Site created by Neo Malesa. Data from the public API <a href="https://github.com/chrisaugu/pngx-api" target="_blank" rel="noreferrer">NUKU API</a> created by <a href="https://github.com/chrisaugu" target="_blank" rel="noreferrer">Christian Augustyn</a>. No warranties.
       </div>
     </div>
   </div>
@@ -89,17 +89,19 @@
         else if(Array.isArray(json?.tickers)) syms = json.tickers.map(x=> x.symbol || x.code || x.ticker).filter(Boolean);
         else if(Array.isArray(json)) syms = json.map(x=> x.symbol || x.code).filter(Boolean);
         if(!syms.length) syms = FALLBACK_SYMBOLS;
+        syms = syms.sort();
         populateSymbols(syms);
       }catch(err){
         console.warn('Failed to load symbols, using fallback.', err);
-        populateSymbols(FALLBACK_SYMBOLS);
+        const sortedFallback = [...FALLBACK_SYMBOLS].sort();
+        populateSymbols(sortedFallback);
         setStatus('Loaded fallback symbol list.');
       }
     }
 
     function populateSymbols(list){
       selSymbol.innerHTML = '';
-      list.sort().forEach(sym => {
+      list.forEach(sym => {
         const opt = document.createElement('option');
         opt.value = sym;
         opt.textContent = sym;
