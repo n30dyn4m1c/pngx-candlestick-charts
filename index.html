@@ -37,6 +37,17 @@
           <label for="symbol">Symbol</label>
           <select id="symbol" size="1">
             <option value="">Select Stock</option>
+            <option value="BSP">BSP</option>
+            <option value="CCP">CCP</option>
+            <option value="CGA">CGA</option>
+            <option value="CPL">CPL</option>
+            <option value="KAM">KAM</option>
+            <option value="KSL">KSL</option>
+            <option value="NEM">NEM</option>
+            <option value="NGP">NGP</option>
+            <option value="NIU">NIU</option>
+            <option value="SST">SST</option>
+            <option value="STO">STO</option>
           </select>
         </div>
         <div>
@@ -61,7 +72,6 @@
 
   <script>
     const BASE = 'https://pngx-api.onrender.com/api/v2';
-    const FALLBACK_SYMBOLS = ["BSP","CCP","CGA","CPL","KAM","KSL","NEM","NGP","NIU","SST","STO"];
 
     const selSymbol = document.getElementById('symbol');
     const inpStart  = document.getElementById('start');
@@ -81,36 +91,6 @@
       inpEnd.value   = fmt(end);
     })();
 
-    async function loadSymbols(){
-      try{
-        const r = await fetch(`${BASE}/tickers`, { cache: 'no-store' });
-        if(!r.ok) throw new Error(`HTTP ${r.status}`);
-        const json = await r.json();
-        let syms = [];
-        if(Array.isArray(json?.symbols)) syms = json.symbols;
-        else if(Array.isArray(json?.tickers)) syms = json.tickers.map(x=> x.symbol || x.code || x.ticker).filter(Boolean);
-        else if(Array.isArray(json)) syms = json.map(x=> x.symbol || x.code).filter(Boolean);
-        if(!syms.length) syms = FALLBACK_SYMBOLS;
-        syms = syms.sort();
-        populateSymbols(syms);
-      }catch(err){
-        console.warn('Failed to load symbols, using fallback.', err);
-        const sortedFallback = [...FALLBACK_SYMBOLS].sort();
-        populateSymbols(sortedFallback);
-        setStatus('Loaded fallback symbol list.');
-      }
-    }
-
-    function populateSymbols(list){
-      list.forEach(sym => {
-        const opt = document.createElement('option');
-        opt.value = sym;
-        opt.textContent = sym;
-        selSymbol.appendChild(opt);
-      });
-      selSymbol.disabled = false;
-    }
-
     async function fetchOHLC(symbol, start, end){
       const url = `${BASE}/historicals/${encodeURIComponent(symbol)}?start=${start}&end=${end}`;
       const r = await fetch(url, { cache: 'no-store' });
@@ -119,8 +99,8 @@
       if(!Array.isArray(data)) return [];
       return data
         .map(d => ({
-          t: d.t || d.time || d.date,
-          o: num(d.o), h: num(d.h), l: num(d.l), c: num(d.c)
+          t: d && (d.t || d.time || d.date),
+          o: num(d && d.o), h: num(d && d.h), l: num(d && d.l), c: num(d && d.c)
         }))
         .filter(d => isFinite(d.o) && isFinite(d.h) && isFinite(d.l) && isFinite(d.c) && d.t)
         .map(d => ({ x: new Date(d.t), y: [d.o, d.h, d.l, d.c] }));
@@ -152,32 +132,28 @@
       const symbol = selSymbol.value;
       const start  = inpStart.value;
       const end    = inpEnd.value;
-      if(!symbol || !start || !end){ setStatus('Please select symbol and dates.'); return; }
-      setStatus('Loading…');
+      if(!symbol){ setStatus('Please select a stock symbol.'); return; }
+      if(!start || !end){ setStatus('Please select a start and end date.'); return; }
+      setStatus(`Loading data for ${symbol}...`);
       try{
         ensureChart();
         const series = await fetchOHLC(symbol, start, end);
         if(!series.length){
           chart.updateSeries([{ name: symbol, data: [] }], true);
-          setStatus('No data returned for the selected range.');
+          setStatus(`No data returned for ${symbol} in the selected range.`);
           return;
         }
         chart.updateSeries([{ name: symbol, data: series }], true);
         setStatus(`${symbol} · ${start} → ${end} · ${series.length} candles`);
       }catch(err){
         console.error(err);
-        setStatus('Failed to load data. Try a different date range.');
+        setStatus(`Failed to load data for ${symbol}. Try a different date range.`);
       }
     }
 
     btnLoad.addEventListener('click', loadChart);
+    selSymbol.addEventListener('change', ()=> setStatus(selSymbol.value ? `Selected ${selSymbol.value}. Choose dates and click Load chart.` : 'Select Stock'));
     window.addEventListener('keydown', (e)=>{ if(e.key==='Enter') loadChart(); });
-
-    (async function(){
-      selSymbol.disabled = true;
-      await loadSymbols();
-      selSymbol.disabled = false;
-    })();
   </script>
 </body>
 </html>
