@@ -9,7 +9,7 @@
     :root{--bg:#0f172a;--card:#111827;--text:#e5e7eb;--muted:#94a3b8;--accent:#22d3ee}
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;background:var(--bg);color:var(--text)}
-    header{padding:18px 20px;border-bottom:1px solid #1f2937;display:flex;justify-content:space-between;align-items:center}
+    header{padding:18px 20px;border-bottom:1px solid #1f2937;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
     header h1{margin:0;font-size:18px;letter-spacing:.3px}
     a{color:var(--accent);text-decoration:none}
     .container{max-width:1100px;margin:24px auto;padding:0 16px}
@@ -21,13 +21,13 @@
     button.primary{background:#0ea5e9;border-color:#0284c7;color:#001018}
     #status{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
     #chart{background:var(--card);border:1px solid #1f2937;border-radius:16px;margin-top:16px}
-    .footer{opacity:.7;font-size:12px;margin-top:10px}
+    .footer{opacity:.7;font-size:12px;margin-top:10px;line-height:1.4}
   </style>
 </head>
 <body>
   <header>
     <h1>PNGX Candlestick Charts</h1>
-    <div><a href="https://github.com/chrisaugu/pngx-api" target="_blank" rel="noreferrer">PNGX (NUKU) API</a></div>
+    <div><a href="https://github.com/chrisaugu/pngx-api" target="_blank" rel="noreferrer">Powered by NUKU API</a></div>
   </header>
 
   <div class="container">
@@ -35,7 +35,7 @@
       <div class="controls">
         <div>
           <label for="symbol">Symbol</label>
-          <select id="symbol"></select>
+          <select id="symbol" size="1"></select>
         </div>
         <div>
           <label for="start">Start date</label>
@@ -51,7 +51,9 @@
       </div>
       <div id="status"></div>
       <div id="chart"></div>
-      <div class="footer">Client-side demo for educational use. Data from public PNGX API. No warranties.</div>
+      <div class="footer">
+        Client-side demo for educational use. Data from the public <a href="https://github.com/chrisaugu/pngx-api" target="_blank" rel="noreferrer">NUKU API</a> created by <a href="https://github.com/chrisaugu" target="_blank" rel="noreferrer">Chris August</a>. No warranties.
+      </div>
     </div>
   </div>
 
@@ -69,7 +71,6 @@
     const fmt = (d)=> d.toISOString().slice(0,10);
     function setStatus(msg){ statusEl.textContent = msg || ''; }
 
-    // Default last 30 days
     (function initDates(){
       const end = new Date();
       const start = new Date();
@@ -100,9 +101,11 @@
       selSymbol.innerHTML = '';
       list.sort().forEach(sym => {
         const opt = document.createElement('option');
-        opt.value = opt.textContent = sym;
+        opt.value = sym;
+        opt.textContent = sym;
         selSymbol.appendChild(opt);
       });
+      selSymbol.disabled = false;
     }
 
     async function fetchOHLC(symbol, start, end){
@@ -165,9 +168,11 @@
     }
 
     btnLoad.addEventListener('click', loadChart);
+    selSymbol.addEventListener('change', loadChart);
     window.addEventListener('keydown', (e)=>{ if(e.key==='Enter') loadChart(); });
 
     (async function(){
+      selSymbol.disabled = true;
       await loadSymbols();
       if(selSymbol.options.length){ selSymbol.selectedIndex = 0; }
       loadChart();
