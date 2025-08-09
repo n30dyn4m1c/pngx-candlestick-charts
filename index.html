@@ -35,7 +35,9 @@
       <div class="controls">
         <div>
           <label for="symbol">Symbol</label>
-          <select id="symbol" size="1"></select>
+          <select id="symbol" size="1">
+            <option value="">Select Stock</option>
+          </select>
         </div>
         <div>
           <label for="start">Start date</label>
@@ -52,7 +54,7 @@
       <div id="status"></div>
       <div id="chart"></div>
       <div class="footer">
-        Site created by Neo Malesa. Data from the public API <a href="https://github.com/chrisaugu/pngx-api" target="_blank" rel="noreferrer">NUKU API</a> created by <a href="https://github.com/chrisaugu" target="_blank" rel="noreferrer">Christian Augustyn</a>. No warranties.
+        Site created by Neo Malesa. Data from the public API <a href="https://github.com/chrisaugu/pngx-api" target="_blank" rel="noreferrer">NUKU API</a> created by <a href="https://github.com/chrisaugu" target="_blank" rel="noreferrer">Chris August</a>. No warranties.
       </div>
     </div>
   </div>
@@ -100,7 +102,6 @@
     }
 
     function populateSymbols(list){
-      selSymbol.innerHTML = '';
       list.forEach(sym => {
         const opt = document.createElement('option');
         opt.value = sym;
@@ -170,14 +171,12 @@
     }
 
     btnLoad.addEventListener('click', loadChart);
-    selSymbol.addEventListener('change', loadChart);
     window.addEventListener('keydown', (e)=>{ if(e.key==='Enter') loadChart(); });
 
     (async function(){
       selSymbol.disabled = true;
       await loadSymbols();
-      if(selSymbol.options.length){ selSymbol.selectedIndex = 0; }
-      loadChart();
+      selSymbol.disabled = false;
     })();
   </script>
 </body>
