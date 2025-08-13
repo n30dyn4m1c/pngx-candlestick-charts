@@ -65,13 +65,14 @@
       <div id="status"></div>
       <div id="chart"></div>
       <div class="footer">
-        Site created by Neo Malesa. Data from the public API <a href="https://github.com/chrisaugu/pngx-api" target="_blank" rel="noreferrer">NUKU API</a> created by <a href="https://github.com/chrisaugu" target="_blank" rel="noreferrer">Chris August</a>. No warranties.
+        Site created by Neo Malesa. Data from the public API <a href="https://github.com/chrisaugu/pngx-api" target="_blank" rel="noreferrer">NUKU API</a> created by <a href="https://github.com/chrisaugu" target="_blank" rel="noreferrer">Christian Augustyn</a>. No warranties.
       </div>
     </div>
   </div>
 
   <script>
-    const BASE = 'https://pngx-api.onrender.com/api/v2';
+    // 1) Use documented host
+    const BASE = 'https://nuku1-btlxx2lu.b4a.run/api/v2';
 
     const selSymbol = document.getElementById('symbol');
     const inpStart  = document.getElementById('start');
@@ -80,7 +81,7 @@
     const statusEl  = document.getElementById('status');
     const chartEl   = document.getElementById('chart');
 
-    const fmt = (d)=> d.toISOString().slice(0,10);
+    const fmt = (d)=> new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0,10); // guard TZ
     function setStatus(msg){ statusEl.textContent = msg || ''; }
 
     (function initDates(){
@@ -91,17 +92,27 @@
       inpEnd.value   = fmt(end);
     })();
 
+    // 2) Fetch with timeout to avoid hanging UI
+    async function fetchWithTimeout(url, ms = 12000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), ms);
+      try {
+        const resp = await fetch(url, { cache: 'no-store', signal: controller.signal });
+        return resp;
+      } finally {
+        clearTimeout(id);
+      }
+    }
+
     async function fetchOHLC(symbol, start, end){
       const url = `${BASE}/historicals/${encodeURIComponent(symbol)}?start=${start}&end=${end}`;
-      const r = await fetch(url, { cache: 'no-store' });
-      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      const r = await fetchWithTimeout(url);
+      if (r.status === 204) return [];
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
       if(!Array.isArray(data)) return [];
       return data
-        .map(d => ({
-          t: d && (d.t || d.time || d.date),
-          o: num(d && d.o), h: num(d && d.h), l: num(d && d.l), c: num(d && d.c)
-        }))
+        .map(d => ({ t: d && (d.t || d.time || d.date), o: num(d && d.o), h: num(d && d.h), l: num(d && d.l), c: num(d && d.c) }))
         .filter(d => isFinite(d.o) && isFinite(d.h) && isFinite(d.l) && isFinite(d.c) && d.t)
         .map(d => ({ x: new Date(d.t), y: [d.o, d.h, d.l, d.c] }));
     }
@@ -128,26 +139,45 @@
       return chart;
     }
 
+    function daysBetween(isoStart, isoEnd){
+      const s = new Date(isoStart + 'T00:00:00Z');
+      const e = new Date(isoEnd   + 'T00:00:00Z');
+      return Math.floor((e - s) / 86400000) + 1;
+    }
+
     async function loadChart(){
       const symbol = selSymbol.value;
-      const start  = inpStart.value;
-      const end    = inpEnd.value;
+      let start    = inpStart.value;
+      let end      = inpEnd.value;
+
       if(!symbol){ setStatus('Please select a stock symbol.'); return; }
       if(!start || !end){ setStatus('Please select a start and end date.'); return; }
+
+      // 3) Validate and normalize dates
+      if (start > end) { const t = start; start = end; end = t; }
+      const span = daysBetween(start, end);
+      if (span > 365) { setStatus('Range too large (>365 days). Please narrow the dates.'); return; }
+
+      // 4) Disable button during load
+      btnLoad.disabled = true; btnLoad.textContent = 'Loading…';
       setStatus(`Loading data for ${symbol}...`);
       try{
         ensureChart();
         const series = await fetchOHLC(symbol, start, end);
         if(!series.length){
           chart.updateSeries([{ name: symbol, data: [] }], true);
-          setStatus(`No data returned for ${symbol} in the selected range.`);
+          setStatus(`No candles for ${symbol} in ${start} → ${end}.`);
           return;
         }
         chart.updateSeries([{ name: symbol, data: series }], true);
         setStatus(`${symbol} · ${start} → ${end} · ${series.length} candles`);
       }catch(err){
         console.error(err);
-        setStatus(`Failed to load data for ${symbol}. Try a different date range.`);
+        if (err.name === 'AbortError') setStatus('Request timed out. Try again or shorten the date range.');
+        else setStatus(`Failed to load data for ${symbol}: ${err.message}`);
+      } finally {
+        // 5) Re-enable UI
+        btnLoad.disabled = false; btnLoad.textContent = 'Load chart';
       }
     }
 
