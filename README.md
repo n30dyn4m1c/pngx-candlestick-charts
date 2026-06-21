@@ -18,7 +18,10 @@ A lightweight web app that fetches OHLC data for PNGX-listed equities via the **
 - ✅ Static dropdown of PNGX symbols 
 - ✅ Date pickers (default last 30 days)
 - ✅ Single-symbol OHLC fetch and render
-- ✅ Timeout and clear status messages (incl. 503)
+- ✅ Resilient API access: automatic retries with exponential backoff on transient failures (502/503/504, timeouts, network errors)
+- ✅ `localStorage` caching — falls back to last-known-good data (up to 24h) when the API is down
+- ✅ Container warm-up ping on load to reduce cold-start delays
+- ✅ One-click Retry and clear, error-type-aware status messages
 - ✅ Proper credits to NUKU API and creator
 
 ---
